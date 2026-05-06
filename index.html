@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎂 Birthday Wordle</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #121213;
+    color: #fff;
+    font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  #root {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  canvas#fw {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+  }
+
+  /* === GAME SCREEN === */
+  #gs {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 20px;
+  }
+  .header {
+    width: 100%;
+    border-bottom: 1px solid #3a3a3c;
+    padding: 14px 0;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .header-title {
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+  }
+  #lvl {
+    font-size: .7rem;
+    color: #818384;
+    margin: 7px 0 5px;
+    letter-spacing: .18em;
+  }
+  #hint {
+    margin: 0 14px 5px;
+    padding: 9px 18px;
+    background: #1c1c1e;
+    border: 1px solid #2d2d30;
+    border-radius: 9px;
+    font-size: .87rem;
+    color: #c8c8c8;
+    text-align: center;
+    max-width: 340px;
+    line-height: 1.55;
+    width: calc(100% - 28px);
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #msg {
+    min-height: 40px;
+    margin: 4px 14px;
+    font-size: .87rem;
+    text-align: center;
+    max-width: 370px;
+    font-weight: 600;
+    line-height: 1.55;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+  #board {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin: 4px 0;
+  }
+  .board-row {
+    display: flex;
+    gap: 5px;
+    perspective: 450px;
+  }
+  .tile {
+    width: 60px;
+    height: 60px;
+    border: 2px solid #3a3a3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+  }
+  #nxt {
+    display: none;
+    margin: 13px 0 5px;
+    padding: 11px 28px;
+    background: #538d4e;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: .07em;
+    transition: opacity .2s;
+  }
+  #nxt:hover { opacity: .85; }
+  #kbd {
+    width: 100%;
+    max-width: 490px;
+    padding: 5px 8px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .kbd-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+  .key {
+    height: 52px;
+    padding: 0;
+    background: #818384;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .35s;
+  }
+
+  /* === CELEBRATION SCREEN === */
+  #cs {
+    display: none;
+    width: 100%;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 18px;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 10;
+  }
+  .cel-rain {
+    font-size: 1.6rem;
+    letter-spacing: .15em;
+    line-height: 2.4;
+    max-width: 320px;
+    word-break: break-word;
+  }
+  .cel-title {
+    font-size: 2.1rem;
+    font-weight: 900;
+    color: #ffd700;
+    letter-spacing: .04em;
+    line-height: 1.4;
+  }
+  .cel-sub {
+    font-size: 1.2rem;
+    color: #f0d0ff;
+    letter-spacing: .08em;
+    font-style: italic;
+  }
+  .cel-bottom {
+    font-size: 1.6rem;
+    letter-spacing: .15em;
+    line-height: 2.4;
+  }
+
+  /* === ANIMATIONS === */
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-5px); }
+    40%,80% { transform: translateX(5px); }
+  }
+  @keyframes pop {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+  }
+  @keyframes sway {
+    0%,100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-10px) rotate(3deg); }
+  }
+  @keyframes sway-r {
+    0%,100% { transform: translateY(0) rotate(3deg); }
+    50% { transform: translateY(-10px) rotate(-3deg); }
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+</style>
+</head>
+<body>
+<div id="root">
+
+  <canvas id="fw"></canvas>
+
+  <!-- GAME SCREEN -->
+  <div id="gs">
+    <div class="header">
+      <div class="header-title">🎂 Birthday Wordle</div>
+    </div>
+    <div id="lvl"></div>
+    <div id="hint"></div>
+    <div id="msg"></div>
+    <div id="board"></div>
+    <button id="nxt"></button>
+    <div id="kbd"></div>
+  </div>
+
+  <!-- CELEBRATION SCREEN -->
+  <div id="cs">
+    <div class="cel-rain" id="cel-top">🎂 💞 🎉 ❤️ 🥂 🎈 👑 🌟 💫 🎊</div>
+    <div class="cel-title">Happy 3x17 Birthday<br>💞👩‍❤️‍👩💞</div>
+    <div class="cel-sub">love you ~~</div>
+    <div class="cel-bottom" id="cel-btm">🎂 💖 🥂 🎊 💞 🎈 🌸 💝 🎉 💞</div>
+  </div>
+
+</div>
+
+<script>
+const LEVELS = [
+  {
+    word: 'TEMPO',
+    hint: '💡 這題應該要一猜就中？',
+    win: 'Bingo! 🏃‍♂️ Tempo 🏃‍♂️!',
+    lose: '啊？怎麼可能？🏃‍♂️ Tempo 🏃‍♂️'
+  },
+  {
+    word: 'BIRTH',
+    hint: 'About 1975 … 🎂',
+    win: '👏👏👏 Happy Birthday! 🎂🎂🎂',
+    lose: '我以為這題也是放水耶！🎂🎂🎂'
+  },
+  {
+    word: 'PRIME',
+    hint: '💡 這題有點難度，但跟我們的生日有關',
+    win: '2, 3, 5, 7, 17 今年是 3 * 17 生日！太太跟女兒 💞👩‍❤️‍👩💞 相乘加持的一年！',
+    lose: '2, 3, 5, 7, 17 都是 PRIME。今年是 3 * 17 生日！太太跟女兒 💞👩‍❤️‍👩💞 相乘加持的一年！'
+  },
+  {
+    word: 'TONIC',
+    hint: "🥃 Something we're working together 💰",
+    win: 'And, Gin is your 🥃 !',
+    lose: 'Is Gin your 🥃 ?'
+  },
+  {
+    word: 'SHARK',
+    hint: '一個我們一起合作 for 20+ years, and it\'s still going on.',
+    win: '🦈🦈🦈',
+    lose: 'Oh no … 🦈'
+  }
+];
+
+const ROWS = 6, COLS = 5;
+const KROWS = [
+  ['Q','W','E','R','T','Y','U','I','O','P'],
+  ['A','S','D','F','G','H','J','K','L'],
+  ['ENTER','Z','X','C','V','B','N','M','⌫']
+];
+const COLORS = { correct: '#538d4e', present: '#b59f3b', absent: '#3a3a3c' };
+const PRI = { correct: 3, present: 2, absent: 1 };
+
+let lvlIdx = 0, curRow = 0, curCol = 0, curGuess = [], gOver = false;
+let tiles = [], keyEls = {}, keyState = {};
+let fwId = null, ptcls = [];
+
+// ── INIT ──
+function init() { buildBoard(); buildKbd(); loadLevel(); }
+
+// ── BOARD ──
+function buildBoard() {
+  const b = document.getElementById('board');
+  b.innerHTML = ''; tiles = [];
+  for (let r = 0; r < ROWS; r++) {
+    const row = document.createElement('div');
+    row.className = 'board-row';
+    const rt = [];
+    for (let c = 0; c < COLS; c++) {
+      const t = document.createElement('div');
+      t.className = 'tile';
+      row.appendChild(t); rt.push(t);
+    }
+    b.appendChild(row); tiles.push(rt);
+  }
+  curRow = 0; curCol = 0; curGuess = []; gOver = false;
+}
+
+// ── KEYBOARD ──
+function buildKbd() {
+  const kbd = document.getElementById('kbd');
+  kbd.innerHTML = ''; keyEls = {}; keyState = {};
+  KROWS.forEach(row => {
+    const d = document.createElement('div');
+    d.className = 'kbd-row';
+    row.forEach(k => {
+      const wide = (k === 'ENTER' || k === '⌫');
+      const btn = document.createElement('button');
+      btn.textContent = k;
+      btn.className = 'key';
+      btn.style.minWidth = wide ? '63px' : '41px';
+      btn.style.fontSize = wide ? '.67rem' : '.84rem';
+      btn.onclick = () => handleKey(k);
+      d.appendChild(btn);
+      if (/^[A-Z]$/.test(k)) keyEls[k] = btn;
+    });
+    kbd.appendChild(d);
+  });
+}
+
+// ── LEVEL ──
+function loadLevel() {
+  const lv = LEVELS[lvlIdx];
+  document.getElementById('lvl').textContent = '— 關卡 ' + (lvlIdx + 1) + ' / 5 —';
+  document.getElementById('hint').textContent = lv.hint;
+  const msg = document.getElementById('msg');
+  msg.textContent = ''; msg.style.color = '#fff';
+  document.getElementById('nxt').style.display = 'none';
+  buildBoard();
+  Object.values(keyEls).forEach(b => b.style.background = '#818384');
+  keyState = {};
+}
+
+// ── INPUT ──
+function handleKey(k) {
+  if (gOver) return;
+  if (k === '⌫' || k === 'Backspace') del();
+  else if (k === 'ENTER' || k === 'Enter') submit();
+  else if (/^[A-Za-z]$/.test(k)) addLetter(k.toUpperCase());
+}
+
+function addLetter(l) {
+  if (curCol >= COLS) return;
+  const t = tiles[curRow][curCol];
+  t.textContent = l; t.style.borderColor = '#999';
+  t.style.animation = 'pop .12s';
+  setTimeout(() => t.style.animation = '', 120);
+  curGuess.push(l); curCol++;
+}
+
+function del() {
+  if (!curCol) return;
+  curCol--; curGuess.pop();
+  tiles[curRow][curCol].textContent = '';
+  tiles[curRow][curCol].style.borderColor = '#3a3a3c';
+}
+
+function submit() {
+  if (curCol < COLS) { shakeTiles(); return; }
+  const guess = curGuess.join(''), word = LEVELS[lvlIdx].word;
+  revealRow(scoreGuess(guess, word), guess, word);
+}
+
+// ── SCORING ──
+function scoreGuess(g, w) {
+  const res = Array(COLS).fill('absent'), used = Array(COLS).fill(false);
+  for (let i = 0; i < COLS; i++) if (g[i] === w[i]) { res[i] = 'correct'; used[i] = true; }
+  for (let i = 0; i < COLS; i++) {
+    if (res[i] === 'correct') continue;
+    for (let j = 0; j < COLS; j++) if (!used[j] && g[i] === w[j]) { res[i] = 'present'; used[j] = true; break; }
+  }
+  return res;
+}
+
+// ── REVEAL ──
+function revealRow(res, guess, word) {
+  const row = curRow;
+  res.forEach((state, i) => {
+    setTimeout(() => {
+      const t = tiles[row][i];
+      t.style.transition = 'transform .24s ease-in';
+      t.style.transform = 'rotateX(90deg)';
+      setTimeout(() => {
+        t.style.background = COLORS[state];
+        t.style.borderColor = COLORS[state];
+        t.style.transition = 'transform .24s ease-out';
+        t.style.transform = 'rotateX(0deg)';
+        const l = guess[i];
+        if (!keyState[l] || PRI[state] > PRI[keyState[l]]) {
+          keyState[l] = state;
+          if (keyEls[l]) keyEls[l].style.background = COLORS[state];
+        }
+        if (i === COLS - 1) setTimeout(() => afterReveal(res, word), 380);
+      }, 240);
+    }, i * 160);
+  });
+}
+
+function afterReveal(res, word) {
+  if (res.every(s => s === 'correct')) {
+    gOver = true;
+    showMsg(LEVELS[lvlIdx].win, true);
+    launchFW(false);
+    setTimeout(showNxt, 1600);
+  } else {
+    curRow++; curCol = 0; curGuess = [];
+    if (curRow >= ROWS) {
+      gOver = true;
+      showMsg('答案是 ' + word + '　｜　' + LEVELS[lvlIdx].lose, false);
+      setTimeout(showNxt, 1100);
+    }
+  }
+}
+
+function showMsg(m, win) {
+  const el = document.getElementById('msg');
+  el.textContent = m;
+  el.style.color = win ? '#6aaa64' : '#e8a838';
+}
+
+function showNxt() {
+  const btn = document.getElementById('nxt');
+  btn.textContent = lvlIdx < LEVELS.length - 1 ? '前往第 ' + (lvlIdx + 2) + ' 關 →' : '🎂 看生日驚喜！';
+  btn.style.display = 'block';
+}
+
+document.getElementById('nxt').onclick = () => {
+  stopFW(); lvlIdx++;
+  lvlIdx >= LEVELS.length ? celebrate() : loadLevel();
+};
+
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  handleKey(e.key);
+});
+
+function shakeTiles() {
+  tiles[curRow].forEach(t => {
+    t.style.animation = 'shake .5s';
+    setTimeout(() => t.style.animation = '', 500);
+  });
+}
+
+// ── FIREWORKS ENGINE ──
+function getC() { return document.getElementById('fw'); }
+
+function launchFW(big) {
+  const c = getC();
+  c.style.display = 'block';
+  c.width = window.innerWidth; c.height = window.innerHeight;
+  const n = big ? 14 : 5;
+  for (let i = 0; i < n; i++) setTimeout(() => doBurst(big), i * (big ? 300 : 130));
+  if (!big) setTimeout(stopFW, 4200);
+}
+
+function doBurst(big) {
+  const c = getC(); if (!c) return;
+  const cols = ['#ff6b9d','#ffd700','#ff4488','#bb44ff','#00cfff','#ff8844','#44ffcc','#538d4e','#b59f3b','#ff99cc'];
+  const col = cols[Math.floor(Math.random() * cols.length)];
+  const x = 40 + Math.random() * (c.width - 80);
+  const y = 20 + Math.random() * c.height * 0.52;
+  const n = big ? 46 : 24;
+  for (let i = 0; i < n; i++) {
+    const a = Math.PI * 2 * i / n, s = 1.5 + Math.random() * 4.5;
+    ptcls.push({
+      x, y,
+      vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+      life: 1, decay: 0.015 + Math.random() * 0.016,
+      col, sz: 1.5 + Math.random() * 2.5,
+      heart: big && Math.random() < 0.45
+    });
+  }
+  if (!fwId) animFW();
+}
+
+function animFW() {
+  const c = getC();
+  if (!c || c.style.display === 'none') return;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  for (const p of ptcls) {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.07; p.vx *= 0.99; p.life -= p.decay;
+    if (p.life <= 0) continue;
+    ctx.globalAlpha = p.life; ctx.fillStyle = p.col;
+    if (p.heart) {
+      const s = Math.max(1, p.sz * 3.4 * p.life), hx = p.x, hy = p.y;
+      ctx.beginPath(); ctx.moveTo(hx, hy + s * 0.28);
+      ctx.bezierCurveTo(hx, hy + s * 0.08, hx - s * 0.5, hy + s * 0.08, hx - s * 0.5, hy + s * 0.28);
+      ctx.bezierCurveTo(hx - s * 0.5, hy + s * 0.58, hx, hy + s * 0.84, hx, hy + s);
+      ctx.bezierCurveTo(hx, hy + s * 0.84, hx + s * 0.5, hy + s * 0.58, hx + s * 0.5, hy + s * 0.28);
+      ctx.bezierCurveTo(hx + s * 0.5, hy + s * 0.08, hx, hy + s * 0.08, hx, hy + s * 0.28);
+      ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, p.sz * p.life), 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ptcls = ptcls.filter(p => p.life > 0);
+  fwId = ptcls.length ? requestAnimationFrame(animFW) : null;
+}
+
+function stopFW() {
+  if (fwId) { cancelAnimationFrame(fwId); fwId = null; }
+  ptcls = [];
+  const c = getC();
+  if (c) { c.getContext('2d').clearRect(0, 0, c.width, c.height); c.style.display = 'none'; }
+}
+
+// ── CELEBRATION ──
+function celebrate() {
+  document.getElementById('gs').style.display = 'none';
+  const cs = document.getElementById('cs');
+  cs.style.display = 'flex';
+
+  document.getElementById('cel-top').style.animation = 'sway 3s ease-in-out infinite';
+  document.getElementById('cel-btm').style.animation = 'sway-r 3.5s ease-in-out infinite';
+
+  setTimeout(() => {
+    const c = getC();
+    c.style.display = 'block';
+    c.width = window.innerWidth; c.height = window.innerHeight;
+    for (let i = 0; i < 24; i++) setTimeout(() => doBurst(true), i * 220);
+    setInterval(() => { doBurst(true); setTimeout(() => doBurst(true), 700); }, 1800);
+    if (!fwId) animFW();
+  }, 150);
+}
+
+window.addEventListener('resize', () => {
+  const c = getC();
+  if (c && c.style.display !== 'none') { c.width = window.innerWidth; c.height = window.innerHeight; }
+});
+
+init();
+</script>
+</body>
+</html>
